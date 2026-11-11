@@ -1,5 +1,9 @@
 #pragma once
 
+#include <vector>
+
+#include "physics.hpp"
+
 class Renderer {
    public:
     Renderer(const Renderer&) = delete;
@@ -8,7 +12,7 @@ class Renderer {
     Renderer& operator=(Renderer&&) = delete;
 
     static Renderer& Instance();
-    void Render() const;
+    void Render(std::vector<Particle>&&) const;
    
    private:
     Renderer();
