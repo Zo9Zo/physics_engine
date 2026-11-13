@@ -2,7 +2,6 @@
 
 #include "event_handler.hpp"
 
-
 EventHandler& EventHandler::Instance() {
     static EventHandler instance;
     return instance;
@@ -21,7 +20,4 @@ void EventHandler::Handle(sf::RenderWindow* window) const {
             }
         }
     }
-}
-
-EventHandler::EventHandler() {
 }

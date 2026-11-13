@@ -12,5 +12,5 @@ class EventHandler {
     void Handle(sf::RenderWindow*) const;
    
    private:
-    EventHandler();
+    EventHandler() = default;
 };

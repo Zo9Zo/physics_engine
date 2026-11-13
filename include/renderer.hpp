@@ -12,8 +12,8 @@ class Renderer {
     Renderer& operator=(Renderer&&) = delete;
 
     static Renderer& Instance();
-    void Render(std::vector<Particle>&&) const;
+    void Render(std::vector<Particle>*) const;
    
    private:
-    Renderer();
+    Renderer() = default;
 };
