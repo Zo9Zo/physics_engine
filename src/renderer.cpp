@@ -49,6 +49,6 @@ void Renderer::Render(std::vector<Particle>* particles) const {
 
         window.display();
 
-        handler.Handle(&window);
+        handler.Handle(&window, physics_manager);
     }
 }

@@ -4,6 +4,8 @@
 
 class PhysicsManager {
    public:
+    enum class STATE {ACTIVE, PAUSED};
+
     PhysicsManager(const PhysicsManager&) = delete;
     PhysicsManager& operator=(const PhysicsManager&) = delete;
     PhysicsManager(PhysicsManager&&) = delete;
@@ -45,9 +47,14 @@ class PhysicsManager {
 
     void Simulate(float);
 
+    STATE State() const;
+
+    void SetState(STATE);
+
    private:
     PhysicsManager() = default;
     
     std::vector<StaticObject*> static_objects_;
     std::vector<DynamicObject*> dynamic_objects_;
+    STATE state_{STATE::ACTIVE};
 };

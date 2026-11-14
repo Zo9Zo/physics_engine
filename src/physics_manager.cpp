@@ -28,6 +28,17 @@ void PhysicsManager::CollideObjects() {
 }
 
 void PhysicsManager::Simulate(float dt) {
+    if (state_ == STATE::PAUSED) {
+        return;
+    }
     CollideObjects();
     MoveObjects(dt);
+}
+
+PhysicsManager::STATE PhysicsManager::State() const {
+    return state_;
+}
+
+void PhysicsManager::SetState(PhysicsManager::STATE state) {
+    state_ = state;
 }

@@ -53,11 +53,6 @@ class StaticObject {
         collider_{std::move(collider)} {
     }
 
-    // StaticObject(const StaticObject&) = default;
-    // StaticObject& operator=(const StaticObject&) = default;
-    // StaticObject(StaticObject&&) = default;
-    // StaticObject& operator=(StaticObject&&) = default;
-    
     Transform* GetTransform();
 
     const Transform& GetTransform() const;
@@ -74,11 +69,6 @@ class DynamicObject {
     DynamicObject(float mass, const sf::Vector2f& position, std::shared_ptr<Collider> collider) : mass_{mass},
         transform_(position), collider_{std::move(collider)} {
     }
-
-    // DynamicObject(const DynamicObject&) = delete;
-    // DynamicObject& operator=(const DynamicObject&) = delete;
-    // DynamicObject(DynamicObject&&) = default;
-    // DynamicObject& operator=(DynamicObject&&) = default;
 
     float Mass() const;
 
