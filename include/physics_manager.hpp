@@ -14,30 +14,16 @@ class PhysicsManager {
     static PhysicsManager& Instance();
 
     template <typename T>
-        requires std::derived_from<T, StaticObject>
+        requires std::derived_from<T, RigidBody>
     void AddObject(T* object) {
-        static_objects_.push_back(&object);
+        rigid_bodies_.push_back(&object);
     }
     
     template <typename T>
-        requires std::derived_from<T, DynamicObject>
-    void AddObject(T* object) {
-        dynamic_objects_.push_back(&object);
-    }
-    
-    template <typename T>
-        requires std::derived_from<T, StaticObject>
+        requires std::derived_from<T, RigidBody>
     void AddObjects(std::vector<T>* objects) {
         for (auto& object : *objects) {
-            static_objects_.push_back(&object);
-        }
-    }
-    
-    template <typename T>
-        requires std::derived_from<T, DynamicObject>
-    void AddObjects(std::vector<T>* objects) {
-        for (auto& object : *objects) {
-            dynamic_objects_.push_back(&object);
+            rigid_bodies_.push_back(&object);
         }
     }
     
@@ -54,7 +40,6 @@ class PhysicsManager {
    private:
     PhysicsManager() = default;
     
-    std::vector<StaticObject*> static_objects_;
-    std::vector<DynamicObject*> dynamic_objects_;
+    std::vector<RigidBody*> rigid_bodies_;
     STATE state_{STATE::ACTIVE};
 };

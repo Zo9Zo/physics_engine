@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <optional>
@@ -5,7 +6,7 @@
 #include "config.hpp"
 #include "physics.hpp"
 
-Collider::TYPE CircleCollider::GetType() const {
+Collider::TYPE CircleCollider::Type() const {
     return Collider::TYPE::CIRCLE;
 }
 
@@ -13,7 +14,7 @@ float CircleCollider::Radius() const {
     return radius_;
 }
 
-Collider::TYPE LineCollider::GetType() const {
+Collider::TYPE LineCollider::Type() const {
     return Collider::TYPE::LINE;
 }
 
@@ -21,48 +22,44 @@ LineCollider::DIRECTION LineCollider::Direction() const {
     return direction_;
 }
 
-Transform* StaticObject::GetTransform() { 
+RigidBody::TYPE RigidBody::Type() const {
+    return type_;
+}
+
+Transform* RigidBody::GetTransform() { 
     return &transform_;
 }
 
-const Transform& StaticObject::GetTransform() const { 
+const Transform& RigidBody::GetTransform() const { 
     return transform_;
 }
 
-const Collider* StaticObject::GetCollider() const {
+const Collider* RigidBody::GetCollider() const {
     return collider_.get();
 }
 
-float DynamicObject::Mass() const { 
-    return mass_;
+float RigidBody::Restitution() const {
+    return restitution_;
 }
 
-sf::Vector2f DynamicObject::Velocity() const {
+float RigidBody::InverseMass() const { 
+    return inverse_mass_;
+}
+
+sf::Vector2f RigidBody::Velocity() const {
     return velocity_;
 }
 
-Transform* DynamicObject::GetTransform() { 
-    return &transform_;
-}
-
-const Transform& DynamicObject::GetTransform() const { 
-    return transform_;
-}
-
-const Collider* DynamicObject::GetCollider() const {
-    return collider_.get();
-}
-
-void DynamicObject::AddForce(const sf::Vector2f& force) {
-    force_ += force;
-}
-
-void DynamicObject::SetVelocity(const sf::Vector2f& velocity) {
+void RigidBody::SetVelocity(const sf::Vector2f& velocity) {
     velocity_ = velocity;
 }
 
-void DynamicObject::Move(float dt) {
-    velocity_ += force_ / mass_ * dt;
+void RigidBody::AddForce(const sf::Vector2f& force) {
+    force_ += force;
+}
+
+void RigidBody::Move(float dt) {
+    velocity_ += force_ * inverse_mass_ * dt;
     transform_.position.x += velocity_.x * dt;
     transform_.position.y -= velocity_.y * dt;
     force_ = {};
@@ -88,6 +85,8 @@ bool HaveCollided(const CircleCollider& circle_collider, const Transform& circle
     return dx < circle_collider.Radius();
 }
 
+// Normal points from object1 to object2
+
 // Circle---Circle
 std::optional<sf::Vector2f> CollisionNormal(const CircleCollider& circle_collider1,
     const Transform& circle_transform1, const CircleCollider& circle_collider2,
@@ -95,7 +94,7 @@ std::optional<sf::Vector2f> CollisionNormal(const CircleCollider& circle_collide
     if (!HaveCollided(circle_collider1, circle_transform1, circle_collider2, circle_transform2)) {
         return std::nullopt;
     }
-    sf::Vector2f r = circle_transform1.position - circle_transform2.position;
+    sf::Vector2f r = circle_transform2.position - circle_transform1.position;
     const float r_length = r.length();
     if (r_length < Config::epsilon) {
         return std::nullopt;
@@ -111,16 +110,29 @@ std::optional<sf::Vector2f> CollisionNormal(const CircleCollider& circle_collide
         return std::nullopt;
     }
     if (line_collider.Direction() == LineCollider::DIRECTION::HORIZONTAL) {
-        return sf::Vector2f{0.0f, 1.0f};
+        const float dy = std::abs(line_transform.position.y - circle_transform.position.y);
+        if (dy > 0.0f) {
+            return sf::Vector2f{0.0f, 1.0f};
+        }
+        return sf::Vector2f{0.0f, -1.0f};
     }
-    return sf::Vector2f{1.0f, 0.0f};
+    const float dx = std::abs(line_transform.position.x - circle_transform.position.x);
+    if (dx > 0.0f) {
+        return sf::Vector2f{1.0f, 0.0f};
+    }
+    return sf::Vector2f{-1.0f, 0.0f};
 }
 
 // Line---Circle
 std::optional<sf::Vector2f> CollisionNormal(const LineCollider& line_collider,
     const Transform& line_transform, const CircleCollider& circle_collider,
     const Transform& circle_transform) {
-    return CollisionNormal(circle_collider, circle_transform, line_collider, line_transform);
+    std::optional<sf::Vector2f> optional_normal = CollisionNormal(circle_collider,
+        circle_transform, line_collider, line_transform);
+    if (!optional_normal.has_value()) { 
+        return std::nullopt;
+    }
+    return -optional_normal.value();
 }
 
 template <typename ColliderType1, typename ColliderType2>
@@ -145,29 +157,39 @@ CollisionMatrix collision_matrix[static_cast<uint32_t>(Collider::TYPE::COUNT)]
     }
 };
 
-void Collide(DynamicObject* object1, const StaticObject& object2) {
+// Object passed by pointer is dynamic, object passed by const reference is static
+
+#include <iostream>
+
+void Collide(RigidBody* object1, const RigidBody& object2) {
     const Collider* const collider1 = object1->GetCollider();
     const Collider* const collider2 = object2.GetCollider();
-    Collider::TYPE collider_type1 = collider1->GetType();
-    Collider::TYPE collider_type2 = collider2->GetType();
+    Collider::TYPE collider_type1 = collider1->Type();
+    Collider::TYPE collider_type2 = collider2->Type();
     const Transform* const transform1 = object1->GetTransform();
-    const Transform* const transform2 = &object2.GetTransform();
+    const Transform transform2 = object2.GetTransform();
     auto optional_normal = collision_matrix[static_cast<uint32_t>(collider_type1)]
-        [static_cast<uint32_t>(collider_type2)](*collider1, *transform1, *collider2, *transform2);
+        [static_cast<uint32_t>(collider_type2)](*collider1, *transform1, *collider2, transform2);
     if (!optional_normal.has_value()) {
         return;
     }
+    std::cout << "collided " << (int)object1->GetCollider()->Type() << " and " << (int)object2.GetCollider()->Type() << "\n";
     const sf::Vector2f normal = std::move(optional_normal).value();
-    const sf::Vector2f v = object1->Velocity();
-    const sf::Vector2f new_velocity = v - 2 * (v.dot(normal)) * normal;
-    object1->SetVelocity(new_velocity);
+    const sf::Vector2f v1 = object1->Velocity();
+    const float restitution = std::min({object1->Restitution(), object2.Restitution()});
+    const sf::Vector2f new_velocity1 = v1 - (1 + restitution) * v1.dot(normal) * normal;
+    object1->SetVelocity(new_velocity1);
 }
 
-void Collide(DynamicObject* object1, DynamicObject* object2) {
+void Collide(const RigidBody& object1, RigidBody* object2) {
+    Collide(object2, object1);
+}
+
+void Collide(RigidBody* object1, RigidBody* object2) {
     const Collider* const collider1 = object1->GetCollider();
     const Collider* const collider2 = object2->GetCollider();
-    Collider::TYPE collider_type1 = collider1->GetType();
-    Collider::TYPE collider_type2 = collider2->GetType();
+    Collider::TYPE collider_type1 = collider1->Type();
+    Collider::TYPE collider_type2 = collider2->Type();
     const Transform* const transform1 = object1->GetTransform();
     const Transform* const transform2 = object2->GetTransform();
     auto optional_normal = collision_matrix[static_cast<uint32_t>(collider_type1)]
@@ -178,11 +200,16 @@ void Collide(DynamicObject* object1, DynamicObject* object2) {
     const sf::Vector2f normal = std::move(optional_normal).value();
     const sf::Vector2f v1 = object1->Velocity();
     const sf::Vector2f v2 = object2->Velocity();
-    const float m1 = object1->Mass();
-    const float m2 = object2->Mass();
-    const sf::Vector2f helper_vector = 2.0f / (m1 + m2) * ((v1 - v2).dot(normal)) * normal;
-    const sf::Vector2f new_velocity1 = v1 - m2 * helper_vector;
-    const sf::Vector2f new_velocity2 = v2 + m1 * helper_vector;
+    const sf::Vector2f v_rel = v2 - v1;
+    if (v_rel.dot(normal) > 0.0f) {
+        return;
+    }
+    const float inv_m1 = object1->InverseMass();
+    const float inv_m2 = object2->InverseMass();
+    const float restitution = std::min({object1->Restitution(), object2->Restitution()});
+    const sf::Vector2f helper_vector = -(1 + restitution) * (v2 - v1).dot(normal) / (inv_m1 + inv_m2) * normal;
+    const sf::Vector2f new_velocity1 = v1 - inv_m1 * helper_vector;
+    const sf::Vector2f new_velocity2 = v2 + inv_m2 * helper_vector;
     object1->SetVelocity(new_velocity1);
     object2->SetVelocity(new_velocity2);
 }

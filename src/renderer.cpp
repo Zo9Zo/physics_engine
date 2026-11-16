@@ -23,10 +23,10 @@ void Renderer::Render(std::vector<Particle>* particles) const {
 
     // TODO: Move this to object_manager
     std::vector<Wall> walls;
-    walls.push_back({LineCollider::DIRECTION::HORIZONTAL, {0, 0}});
-    walls.push_back({LineCollider::DIRECTION::HORIZONTAL, static_cast<sf::Vector2f>(Config::window_resolution)});
-    walls.push_back({LineCollider::DIRECTION::VERTICAL, {0, 0}});
-    walls.push_back({LineCollider::DIRECTION::VERTICAL, static_cast<sf::Vector2f>(Config::window_resolution)});
+    walls.push_back({LineCollider::DIRECTION::HORIZONTAL, {0, 0}, 1.0f});
+    walls.push_back({LineCollider::DIRECTION::HORIZONTAL, static_cast<sf::Vector2f>(Config::window_resolution), 1.0f});
+    walls.push_back({LineCollider::DIRECTION::VERTICAL, {0, 0}, 1.0f});
+    walls.push_back({LineCollider::DIRECTION::VERTICAL, static_cast<sf::Vector2f>(Config::window_resolution), 1.0f});
     
     physics_manager->AddObjects(&walls);
 

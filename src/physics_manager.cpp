@@ -7,22 +7,34 @@ PhysicsManager& PhysicsManager::Instance() {
 }
 
 void PhysicsManager::MoveObjects(float dt) {
-    for (auto& object : dynamic_objects_) {
-        object->AddForce({0.0f, -object->Mass() * Config::g});
+    for (auto& object : rigid_bodies_) {
+        if (object->Type() == RigidBody::TYPE::STATIC) {
+            continue;
+        }
+        if (object->InverseMass() > Config::epsilon) {
+            object->AddForce({0.0f, -1.0f / object->InverseMass() * Config::g});
+        }
         object->Move(dt);
     }
 }
 
 void PhysicsManager::CollideObjects() {
-    for (int i = 0; i < dynamic_objects_.size(); ++i) {
-        DynamicObject* dynamic_object1 = dynamic_objects_[i];
-        for (int j = 0; j < static_objects_.size(); ++j) {
-            const StaticObject& static_object = *static_objects_[j];
-            Collide(dynamic_object1, static_object);
-        }
-        for (int j = i + 1; j < dynamic_objects_.size(); ++j) {
-            DynamicObject* dynamic_object2 = dynamic_objects_[j];
-            Collide(dynamic_object1, dynamic_object2);
+    for (int i = 0; i < rigid_bodies_.size(); ++i) {
+        RigidBody* rigid_body1 = rigid_bodies_[i];
+        for (int j = i + 1; j < rigid_bodies_.size(); ++j) {
+            RigidBody* rigid_body2 = rigid_bodies_[j];
+            if (rigid_body1->Type() == RigidBody::TYPE::STATIC) {
+                if (rigid_body2->Type() == RigidBody::TYPE::STATIC) {
+                    continue;
+                }
+                Collide(*rigid_body1, rigid_body2);
+                continue;
+            }
+            if (rigid_body2->Type() == RigidBody::TYPE::STATIC) {
+                Collide(rigid_body1, *rigid_body2);
+                continue;
+            }
+            Collide(rigid_body1, rigid_body2);
         }
     }
 }
