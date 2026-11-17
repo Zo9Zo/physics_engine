@@ -9,7 +9,7 @@ namespace Config {
     inline constexpr int particle_amount = 1;
     inline constexpr float particle_radius = 10.0f;
     inline constexpr float particle_mass = 10.0f;
-    inline constexpr float particle_restitution = 0.5f;
+    inline constexpr float particle_restitution = 1.0f;
     // inline constexpr float max_velocity = 50.0f;
 
     inline constexpr float epsilon = 1e-9;

@@ -23,15 +23,8 @@ void PhysicsManager::CollideObjects() {
         RigidBody* rigid_body1 = rigid_bodies_[i];
         for (int j = i + 1; j < rigid_bodies_.size(); ++j) {
             RigidBody* rigid_body2 = rigid_bodies_[j];
-            if (rigid_body1->Type() == RigidBody::TYPE::STATIC) {
-                if (rigid_body2->Type() == RigidBody::TYPE::STATIC) {
-                    continue;
-                }
-                Collide(*rigid_body1, rigid_body2);
-                continue;
-            }
-            if (rigid_body2->Type() == RigidBody::TYPE::STATIC) {
-                Collide(rigid_body1, *rigid_body2);
+            if (rigid_body1->Type() == RigidBody::TYPE::STATIC &&
+                rigid_body2->Type() == RigidBody::TYPE::STATIC) {
                 continue;
             }
             Collide(rigid_body1, rigid_body2);

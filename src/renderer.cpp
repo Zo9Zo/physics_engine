@@ -39,7 +39,9 @@ void Renderer::Render(std::vector<Particle>* particles) const {
             sf::CircleShape circle(radius);
             circle.setOrigin({radius, radius});
             circle.setFillColor(sf::Color::Cyan);
-            circle.setPosition(particle->GetTransform().position);
+            const sf::Vector2f world_position = particle->GetTransform().position;
+            const sf::Vector2f screen_position = {world_position.x, window.getSize().y - world_position.y};
+            circle.setPosition(screen_position);
             circle.setOutlineColor(sf::Color::White);
             circle.setOutlineThickness(1.0f);
             window.draw(circle);

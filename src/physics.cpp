@@ -61,7 +61,7 @@ void RigidBody::AddForce(const sf::Vector2f& force) {
 void RigidBody::Move(float dt) {
     velocity_ += force_ * inverse_mass_ * dt;
     transform_.position.x += velocity_.x * dt;
-    transform_.position.y -= velocity_.y * dt;
+    transform_.position.y += velocity_.y * dt;
     force_ = {};
 }
 
@@ -110,13 +110,13 @@ std::optional<sf::Vector2f> CollisionNormal(const CircleCollider& circle_collide
         return std::nullopt;
     }
     if (line_collider.Direction() == LineCollider::DIRECTION::HORIZONTAL) {
-        const float dy = std::abs(line_transform.position.y - circle_transform.position.y);
+        const float dy = line_transform.position.y - circle_transform.position.y;
         if (dy > 0.0f) {
             return sf::Vector2f{0.0f, 1.0f};
         }
         return sf::Vector2f{0.0f, -1.0f};
     }
-    const float dx = std::abs(line_transform.position.x - circle_transform.position.x);
+    const float dx = line_transform.position.x - circle_transform.position.x;
     if (dx > 0.0f) {
         return sf::Vector2f{1.0f, 0.0f};
     }
@@ -157,34 +157,6 @@ CollisionMatrix collision_matrix[static_cast<uint32_t>(Collider::TYPE::COUNT)]
     }
 };
 
-// Object passed by pointer is dynamic, object passed by const reference is static
-
-#include <iostream>
-
-void Collide(RigidBody* object1, const RigidBody& object2) {
-    const Collider* const collider1 = object1->GetCollider();
-    const Collider* const collider2 = object2.GetCollider();
-    Collider::TYPE collider_type1 = collider1->Type();
-    Collider::TYPE collider_type2 = collider2->Type();
-    const Transform* const transform1 = object1->GetTransform();
-    const Transform transform2 = object2.GetTransform();
-    auto optional_normal = collision_matrix[static_cast<uint32_t>(collider_type1)]
-        [static_cast<uint32_t>(collider_type2)](*collider1, *transform1, *collider2, transform2);
-    if (!optional_normal.has_value()) {
-        return;
-    }
-    std::cout << "collided " << (int)object1->GetCollider()->Type() << " and " << (int)object2.GetCollider()->Type() << "\n";
-    const sf::Vector2f normal = std::move(optional_normal).value();
-    const sf::Vector2f v1 = object1->Velocity();
-    const float restitution = std::min({object1->Restitution(), object2.Restitution()});
-    const sf::Vector2f new_velocity1 = v1 - (1 + restitution) * v1.dot(normal) * normal;
-    object1->SetVelocity(new_velocity1);
-}
-
-void Collide(const RigidBody& object1, RigidBody* object2) {
-    Collide(object2, object1);
-}
-
 void Collide(RigidBody* object1, RigidBody* object2) {
     const Collider* const collider1 = object1->GetCollider();
     const Collider* const collider2 = object2->GetCollider();
@@ -192,8 +164,12 @@ void Collide(RigidBody* object1, RigidBody* object2) {
     Collider::TYPE collider_type2 = collider2->Type();
     const Transform* const transform1 = object1->GetTransform();
     const Transform* const transform2 = object2->GetTransform();
-    auto optional_normal = collision_matrix[static_cast<uint32_t>(collider_type1)]
-        [static_cast<uint32_t>(collider_type2)](*collider1, *transform1, *collider2, *transform2);
+    auto collision_function = collision_matrix[static_cast<uint32_t>(collider_type1)]
+        [static_cast<uint32_t>(collider_type2)];
+    if (collision_function == nullptr) {
+        return;
+    }
+    auto optional_normal = collision_function(*collider1, *transform1, *collider2, *transform2);
     if (!optional_normal.has_value()) {
         return;
     }
